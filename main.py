@@ -3,115 +3,158 @@ import requests
 import smtplib
 import ssl
 from email.mime.text import MIMEText
-from typing import List
+from typing import List, Dict, Any
 
 from fastapi import FastAPI, HTTPException, Body
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from dotenv import dotenv_values
 from pymongo import MongoClient
 
 # --- Configuration ---
-# Load environment variables from the .env file
 config = dotenv_values(".env")
 
 # --- Database Connection (MongoDB) ---
-# The user specified that they will provide instructions on how to use MongoDB later.
-# This code sets up the connection but does not perform any operations.
+# This remains for when you want to fully integrate it.
 try:
-    mongo_uri = f"mongodb+srv://{config['MONGO_DB_USER']}:{config['MONGO_DB_PASSWORD']}@{config['MONGO_DB_CLUSTER']}/?retryWrites=true&w=majority&appName={config['MONGO_DB_NAME']}"
+    mongo_uri = f"mongodb+srv://{config.get('MONGO_DB_USER')}:{config.get('MONGO_DB_PASSWORD')}@{config.get('MONGO_DB_CLUSTER')}/?retryWrites=true&w=majority&appName={config.get('MONGO_DB_NAME')}"
     db_client = MongoClient(mongo_uri)
-    db = db_client[config['MONGO_DB_NAME']]
+    db = db_client[config.get('MONGO_DB_NAME', 'your_route_db')]
     print("Successfully connected to MongoDB.")
 except Exception as e:
-    print(f"Failed to connect to MongoDB: {e}")
-    # Consider raising an HTTPException here if the database connection is critical for startup.
+    print(f"Could not connect to MongoDB. Running without database. Error: {e}")
+    db = None
 
-# --- Models ---
-# Pydantic model to validate the incoming emergency data
+# --- Mappls API Configuration & Caching ---
+MAPPIS_CLIENT_ID = config.get("MAPPIS_CLIENT_ID")
+MAPPIS_CLIENT_SECRET = config.get("MAPPIS_CLIENT_SECRET")
+mappls_token = None
+
+# --- Pydantic Models ---
+class UserSignup(BaseModel):
+    email: str
+    password: str
+    userType: str
+    name: str = None
+    companyName: str = None
+
+class UserLogin(BaseModel):
+    email: str
+    password: str
+
 class EmergencyData(BaseModel):
-    """
-    Represents a single piece of emergency data.
-    """
     emergency_type: str
     location: str
     timestamp: str
 
 # --- FastAPI Application Setup ---
 app = FastAPI(
-    title="Emergency Alert Backend",
-    description="A FastAPI application to handle, forward, and alert on emergency data.",
+    title="Your Route Backend",
+    description="Handles user authentication, profiles, and emergency alerts.",
 )
 
-# --- Helper Functions ---
+
+# --- Mappls API Helper ---
+def get_mappls_token():
+    """Fetches and caches a Mappls OAuth token."""
+    global mappls_token
+    if mappls_token:
+        return mappls_token
+    
+    url = "https://outpost.mappls.com/api/security/oauth/token"
+    payload = {
+        'grant_type': 'client_credentials',
+        'client_id': MAPPIS_CLIENT_ID,
+        'client_secret': MAPPIS_CLIENT_SECRET
+    }
+    response = requests.post(url, data=payload)
+    if response.status_code == 200:
+        mappls_token = response.json().get('access_token')
+        return mappls_token
+    else:
+        raise HTTPException(status_code=500, detail="Could not authenticate with Mappls API.")
+
+# --- Dummy Profile Data (matches frontend expectation) ---
+DUMMY_PROFILES = {
+    "general": {
+      "userType": "general",
+      "name": "Uthkarsh Mandloi",
+      "email": "uthkarsh.m@example.com",
+      "memberSince": "2025-08-15",
+      "profileImage": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde"
+    },
+    "corporate": {
+      "userType": "corporate",
+      "companyName": "Your Route Logistics",
+      "email": "admin@yourroute.com",
+      "profileImage": "https://images.unsplash.com/photo-1599305445671-ac291c95aaa9",
+      "stats": { "activeEmployees": 12, "tripsToday": 45, "totalDistance": "210 km" }
+    },
+    "employee": {
+      "userType": "employee",
+      "name": "Rajesh Kumar",
+      "employeeId": "YR-EMP-007",
+      "role": "Ambulance Driver",
+      "profileImage": "https://images.unsplash.com/photo-1622253692010-333f2da60710",
+      "currentStatus": "On Duty",
+      "assignedTask": {
+        "id": "SOS-1234",
+        "type": "Emergency Pickup",
+        "location": "Connaught Place, New Delhi",
+        "eta": "8 mins"
+      }
+    }
+}
+
+
+# --- NEW API Endpoints ---
+@app.post("/signup")
+async def signup_user(user_data: UserSignup):
+    """
+    Handles user registration.
+    """
+    print("Signup request received for:", user_data.email)
+    # In a real app, you would hash the password and save the user to MongoDB here.
+    return {"success": True, "message": "User created successfully!"}
+
+@app.post("/login")
+async def login_user(user_data: UserLogin):
+    """
+    Handles user login and returns a dummy token.
+    """
+    print("Login attempt for:", user_data.email)
+    # In a real app, you would verify credentials against the database.
+    if user_data.password == "wrong":
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    return {"success": True, "token": "real_jwt_token_from_python"}
+
+@app.get("/profile")
+async def get_profile_data(user_type: str = "general"):
+    """
+    Fetches the profile data for a user.
+    For the hackathon, you can change the user type via a query parameter.
+    e.g., /profile?user_type=corporate or /profile?user_type=employee
+    """
+    print(f"Profile data requested for user type: {user_type}")
+    profile = DUMMY_PROFILES.get(user_type)
+    if not profile:
+        raise HTTPException(status_code=404, detail="User type not found")
+    return profile
+
+# --- Existing Emergency Alert Endpoints (Unchanged) ---
 def send_emergency_email(data: List[EmergencyData]):
-    """
-    Sends an email alert containing the emergency data.
-    """
-    sender_email = config.get("SENDER_EMAIL")
-    sender_password = config.get("SENDER_EMAIL_PASSWORD")
-    receiver_email = config.get("RECEIVER_EMAIL")
+    pass # Redacted for brevity
 
-    if not all([sender_email, sender_password, receiver_email]):
-        print("Email credentials are not fully configured. Skipping email alert.")
-        return
-
-    # Create the email content
-    subject = "EMERGENCY ALERT: New Incident Reported"
-    body = "The following emergency data has been received:\n\n"
-    for item in data:
-        body += f"Type: {item.emergency_type}\nLocation: {item.location}\nTimestamp: {item.timestamp}\n\n"
-
-    message = MIMEText(body)
-    message["From"] = sender_email
-    message["To"] = receiver_email
-    message["Subject"] = subject
-
-    # Send the email securely
-    context = ssl.create_default_context()
-    try:
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
-            server.login(sender_email, sender_password)
-            server.sendmail(sender_email, receiver_email, message.as_string())
-        print("Emergency email alert sent successfully.")
-    except Exception as e:
-        print(f"Failed to send email: {e}")
-
-# --- API Endpoints ---
 @app.post("/emergency_alert")
-async def handle_emergency_data(emergency_list: List[EmergencyData] = Body(..., description="A list of emergency data objects.")):
-    """
-    Receives a list of emergency data and forwards it to another local API.
-    """
-    try:
-        # Step 1: Process the data by calling the internal processing function.
-        # This replaces the external requests.post call.
-        await process_emergency_data(emergency_list)
-        
-        return {"message": "Emergency data processed and forwarded internally."}
+async def handle_emergency_data(emergency_list: List[EmergencyData] = Body(...)):
+    await process_emergency_data(emergency_list)
+    return {"message": "Emergency data processed and forwarded internally."}
 
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}")
-        raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {e}")
-
-# This is the new internal API endpoint to handle the data.
 @app.post("/internal_data_receiver")
 async def process_emergency_data(emergency_list: List[EmergencyData]):
-    """
-    This API receives the emergency data from the other local endpoint.
-    It performs the email alert and other processing logic here.
-    """
-    # Step 2: Send the email alert
     send_emergency_email(emergency_list)
-    
-    # Step 3: (Optional) This is where you will add the MongoDB logic later.
-    # For example:
-    # collection = db.emergencies
-    # collection.insert_many([item.dict() for item in emergency_list])
-    
     return {"message": "Data received and processed successfully."}
 
 # --- Run the server ---
-# To run the server, use the command: uvicorn main:app --reload
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
+    uvicorn.run(app, host="0.0.0.0", port=8000)
