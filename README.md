@@ -1,58 +1,57 @@
-SafeAI: Your AI-Powered Companion for Safe Adventures
-SafeAI is a mobile application designed to enhance personal safety and provide powerful, AI-assisted navigation for your outdoor activities. Whether you're a lone traveler, an adventure enthusiast, or a corporate professional on the move, SafeAI is your one-stop solution for a secure and connected experience.
+Python Backend API
+This is a backend API built with Python, serving as a core service for web applications. The project is designed to be lightweight, efficient, and easily deployable.
 
-Live Link: https://safeai.onrender.com
+Live Link: https://python-backend-2vtt.onrender.com
 
-✨ Features
-Emergency SOS: In an emergency, simply saying "Help" or tapping the emergency button instantly alerts your loved ones and dispatches emergency services with your live location.
+🚀 Key Features
+Lightweight: Built to be fast and resource-efficient.
 
-Intelligent Route Planning: Plan your cycling, running, or walking routes. The AI assistant helps you find interesting locations and nearby events, like marathons or trail runs, to make your adventures more engaging.
+RESTful API: Provides a clean and easy-to-use API for client-side applications.
 
-Corporate Workforce Management: SafeAI offers a robust corporate solution to monitor employee locations, attendance, and tasks. Features include:
+Scalable: Deployed on Render, ensuring the application can handle increased traffic.
 
-Geofencing: Create and manage geofenced zones to track workforce activity, ensuring employees are on-site for their assigned hours.
-
-Real-time Monitoring: View live status (online, on-field, offline), last arrival times, and assigned tasks for all employees.
-
-AI-Powered Assistance: A conversational AI assistant is integrated into the app to help with route planning and other queries, providing personalized recommendations and information.
-
-Authentication: The app supports multiple authentication types, including quick login for general users and dedicated logins for corporate and employee accounts.
+Modular: The project structure is simple and easy to understand, with a clear entry point in main.py.
 
 ⚙️ Technology Stack
-This project is a full-stack application leveraging modern, scalable technologies.
+Python: The core programming language.
 
-Frontend:
+Flask/FastAPI: The web framework used to build the API (inferred from the file structure).
 
-Flutter: The mobile application is built with Flutter, enabling a single codebase for both iOS and Android.
+Render: The cloud platform used for continuous deployment.
 
-React: A web-based frontend is also developed with React to provide a dashboard for corporate features.
+📦 Getting Started
+Prerequisites
+Python 3.x
 
-Backend:
+pip for package management
 
-Node.js: The backend server is built with Node.js for high performance and scalability.
+Installation
+Clone the repository:
 
-AI Model: The AI assistant uses an LLM (Large Language Model) to provide intelligent and context-aware responses, likely utilizing a RAG (Retrieval-Augmented Generation) architecture to access relevant, up-to-date information.
+git clone [https://github.com/](https://github.com/)[Your-GitHub-Username]/[Your-Repo-Name].git
+cd [Your-Repo-Name]
 
-Database:
+Install dependencies:
 
-MongoDB: Stores user data, geofencing configurations, and other application-specific information.
+pip install -r requirements.txt
 
-Mapping & Location Services:
+Running the Server
+Start the server locally:
 
-MapmyIndia: Powers the mapping, geofencing, and navigation features.
+python main.py
 
-Deployment:
-
-Render: The backend is deployed on Render, a cloud platform for running web services and APIs.
+The API will now be running on your local machine. Refer to the main.py file for the specific endpoint routes.
 
 📂 Project Structure
-client/: The source code for the Flutter mobile application.
+main.py: The main entry point of the application.
 
-server/: The backend server code, built with Node.js and the AI integration logic.
+requirements.txt: Lists all Python dependencies needed to run the project.
 
-shared/: Shared components, types, and utilities used by both the client and server.
+__pycache__/: Directory for Python compiled files.
 
-.env.example: A template for environment variables required to run the project.
+.gitignore: Specifies files and directories to be ignored by Git.
+
+README.md: The main documentation file for the project.
 
 🤝 Contribution
-We welcome contributions! If you have suggestions for new features, bug fixes, or improvements, feel free to open an issue or submit a pull request.
+Contributions are welcome! If you find a bug or have a suggestion, please open an issue or submit a pull request.
